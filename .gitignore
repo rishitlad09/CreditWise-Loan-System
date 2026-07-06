@@ -1,1 +1,6 @@
 loan_approval_data.csv
+
+venv/
+
+logs/
+data/
