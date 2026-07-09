@@ -111,7 +111,7 @@ def save_data(train_data:pd.DataFrame,test_data:pd.DataFrame,path:str)->None:
         raise
 def main():
     param_path = 'params.yaml'
-    test_size = load_params(path=param_path)['feature_engineering']
+    test_size = load_params(path=param_path)['feature_engineering']['test_size']
     df = pd.read_csv('./data/processed/processed.csv')
     
     train_data,test_data = train_test_split(df,test_size=test_size,random_state=42)
