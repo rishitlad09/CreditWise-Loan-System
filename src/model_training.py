@@ -5,6 +5,7 @@ from xgboost import XGBClassifier
 from sklearn.preprocessing import LabelEncoder
 import pickle
 import numpy as np
+import yaml
 log_dir = "logs"
 os.makedirs(log_dir,exist_ok=True)
 
@@ -27,6 +28,20 @@ if not logger.handlers:
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
+def load_params(path:str)->dict:
+    try:
+        with open(path,'r') as file:
+            params = yaml.safe_load(file)
+        logger.debug("parameters loaded successfully")
+        return params
+    except FileNotFoundError:
+        logger.error('File not found : %s',path)
+        raise
+    except yaml.YAMLError as e:
+        logger.error('YAML error : %s',e)
+        raise
+    except Exception as e:
+        logger.error('Error while loading parameters from path : %s',path)
 
 def load_data(path:str)->pd.DataFrame:
     """Load the training dataset from disk."""
@@ -92,11 +107,8 @@ def main():
         X_train = train_data.drop(columns='Loan_Approved',axis=1)
         y_train = train_data['Loan_Approved']
         y_train_en = encode(y_train=y_train)
-        params = {
-            "n_estimators":100,
-            "max_depth":5,
-            "random_state": 42,
-        }
+        param_path = 'params.yaml'
+        params = load_params(path=param_path)['model_training']
         model = train_model(X_train,y_train_en,params)
         file_path = 'models/model.pkl'
         save_model(model=model,file_path=file_path)

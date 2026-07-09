@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder,OneHotEncoder
 from sklearn.model_selection import train_test_split
+import yaml
 log_dir = "logs"
 os.makedirs(log_dir,exist_ok=True)
 
@@ -26,7 +27,22 @@ if not logger.handlers:
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     
-    
+def load_params(path:str)->dict:
+    try:
+        with open(path,'r') as file:
+            params = yaml.safe_load(file)
+        logger.debug("parameters loaded successfully")
+        return params
+    except FileNotFoundError:
+        logger.error('File not found : %s',path)
+        raise
+    except yaml.YAMLError as e:
+        logger.error('YAML error : %s',e)
+        raise
+    except Exception as e:
+        logger.error('Error while loading parameters from path : %s',path)
+        
+        
 def encode_data(train_data:pd.DataFrame,test_data:pd.DataFrame)->pd.DataFrame:
     try:
 
@@ -94,7 +110,8 @@ def save_data(train_data:pd.DataFrame,test_data:pd.DataFrame,path:str)->None:
         logger.error('Unexpected error occured while saving : %s',e)
         raise
 def main():
-    test_size = 0.20
+    param_path = 'params.yaml'
+    test_size = load_params(path=param_path)['feature_engineering']
     df = pd.read_csv('./data/processed/processed.csv')
     
     train_data,test_data = train_test_split(df,test_size=test_size,random_state=42)

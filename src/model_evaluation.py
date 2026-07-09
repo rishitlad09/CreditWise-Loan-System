@@ -7,6 +7,7 @@ from xgboost import XGBClassifier
 import numpy as np
 from sklearn.metrics import precision_score,accuracy_score,f1_score,recall_score
 import json
+from dvclive import Live
 log_dir = "logs"
 os.makedirs(log_dir,exist_ok=True)
 
@@ -54,7 +55,7 @@ def load_data(file_path:str)-> pd.DataFrame:
         raise
     
 def encode(y_test:pd.Series)->np.ndarray:
-    """Encode the training target labels"""
+    """Encode the testing  target labels"""
     try:
         le = LabelEncoder()
     
@@ -66,7 +67,7 @@ def encode(y_test:pd.Series)->np.ndarray:
         raise
 
 def evaluate_model(model:XGBClassifier,X_test:pd.DataFrame,y_test:np.ndarray)->dict:
-    """Evaluate the model and return the evaluation metircs."""
+    """Evaluate the model and return the evaluation metrics."""
     
     try:
         y_pred = model.predict(X_test)
@@ -74,11 +75,13 @@ def evaluate_model(model:XGBClassifier,X_test:pd.DataFrame,y_test:np.ndarray)->d
         accuracy = accuracy_score(y_test,y_pred)
         precision=precision_score(y_test,y_pred)
         recall=recall_score(y_test,y_pred)
+        f1score = f1_score(y_test,y_pred)
         
         metrics = {
             "accuracy":accuracy,
             "precision":precision,
-            "recall":recall    
+            "recall":recall,
+            "f1_score":f1score   
         }
         logger.debug('Model Evaluation metrics calculated.... ')
         return metrics
@@ -96,22 +99,26 @@ def save_metrics(metrics:dict,metric_path:str)->None:
             json.dump(metrics,file,indent=4)
         logger.debug('Metrics saved to %s',metric_path)
     except Exception as e:
-        logger.debug('Error occurred while saving the evaluation metrics : %s',e )
+        logger.error('Error occurred while saving the evaluation metrics : %s',e )
         raise
     
 def main():
     
     try:
         file_path = 'data/final/test_final.csv'
-        X_testing = load_data(file_path=file_path)
+        test_data = load_data(file_path=file_path)
         path = './models/model.pkl'
         model = load_model(path=path)
-        X_test = X_testing.drop(columns='Loan_Approved',axis=1)
-        y_test=X_testing['Loan_Approved']
+        X_test = test_data.drop(columns='Loan_Approved')
+        y_test=test_data['Loan_Approved']
         y_test_en = encode(y_test=y_test)
         
         results = evaluate_model(model=model,X_test=X_test,y_test=y_test_en)
         metric_path='reports/metrics.json'
+        with Live(save_dvc_exp=True) as live:
+            for metric_name,metric_value in results.items():
+                live.log_metric(metric_name,metric_value)
+                
         save_metrics(metrics=results,metric_path=metric_path)
         
     
